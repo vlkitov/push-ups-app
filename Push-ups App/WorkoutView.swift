@@ -47,6 +47,12 @@ struct WorkoutView: View {
             .padding()
         }
         .navigationBarBackButtonHidden(isWorkoutActive)
+        .onChange(of: isWorkoutActive) { _, active in
+            UIApplication.shared.isIdleTimerDisabled = active
+        }
+        .onDisappear {
+            UIApplication.shared.isIdleTimerDisabled = false
+        }
         .onAppear {
             checkCameraPermission()
         }
