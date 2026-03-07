@@ -53,22 +53,13 @@ struct ContentView: View {
         GeometryReader { geo in
             let w = geo.size.width
             let h = geo.size.height
+            let top = geo.safeAreaInsets.top
             let bot = geo.safeAreaInsets.bottom
 
             ZStack {
                 // Always-on background
                 Color(hex: "#191717")
                     .ignoresSafeArea()
-
-                // Red glow — always at same position
-                Ellipse()
-                    .foregroundColor(.clear)
-                    .frame(width: 768, height: 768)
-                    .background(Color(red: 1, green: 0, blue: 0))
-                    .cornerRadius(384)
-                    .blur(radius: 64)
-                    .rotationEffect(Angle(degrees: 90))
-                    .position(x: w / 2, y: h - bot - w / 2)
 
                 // AR session (invisible, runs during countdown + workout)
                 if phase != .home {
@@ -78,32 +69,14 @@ struct ContentView: View {
 
                 // Workout rep counter (top area)
                 if phase == .workout {
-                    VStack(spacing: 0) {
-                        Text("\(detector.pushUpCount)")
-                            .font(.system(size: 560, weight: .black))
-                            .tracking(-13.44)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .contentTransition(.numericText(value: Double(detector.pushUpCount)))
-                            .animation(.easeInOut(duration: 0.2), value: detector.pushUpCount)
-                        Spacer(minLength: 0)
-                    }
-                    .transition(.opacity)
+                    workoutCounter(w: w, h: h, top: top, bot: bot)
+                        .transition(.opacity)
                 }
 
                 // Countdown counter — behind the circle, starts from top
                 if phase == .countdown && !countdownText.isEmpty {
-                    VStack(spacing: 0) {
-                        Text(countdownText)
-                            .font(.system(size: 560, weight: .black))
-                            .tracking(-13.44)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .contentTransition(.numericText())
-                            .animation(.easeInOut(duration: 0.2), value: countdownText)
-                        Spacer(minLength: 0)
-                    }
-                    .transition(.opacity)
+                    countdownCounter(w: w, h: h, top: top, bot: bot)
+                        .transition(.opacity)
                 }
 
                 // Bottom circle — always at same position, content switches inside
@@ -123,6 +96,36 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Counters
+
+    private func workoutCounter(w: CGFloat, h: CGFloat, top: CGFloat, bot: CGFloat) -> some View {
+        let availableHeight = h - top - bot - w
+        return Text("\(detector.pushUpCount)")
+            .font(.system(size: availableHeight, weight: .black, design: .default))
+            .fontWidth(.compressed)
+            .minimumScaleFactor(0.01)
+            .lineLimit(1)
+            .foregroundStyle(.white)
+            .frame(width: w, height: availableHeight, alignment: .center)
+            .position(x: w / 2, y: top + availableHeight * 0.6)
+            .contentTransition(.numericText(value: Double(detector.pushUpCount)))
+            .animation(.easeInOut(duration: 0.2), value: detector.pushUpCount)
+    }
+
+    private func countdownCounter(w: CGFloat, h: CGFloat, top: CGFloat, bot: CGFloat) -> some View {
+        let availableHeight = h - top - bot - w
+        return Text(countdownText)
+            .font(.system(size: availableHeight, weight: .black, design: .default))
+            .fontWidth(.compressed)
+            .minimumScaleFactor(0.01)
+            .lineLimit(1)
+            .foregroundStyle(.white)
+            .frame(width: w, height: availableHeight, alignment: .center)
+            .position(x: w / 2, y: top + availableHeight * 0.6)
+            .contentTransition(.numericText())
+            .animation(.easeInOut(duration: 0.2), value: countdownText)
+    }
+
     // MARK: - Bottom circle
 
     private func bottomCircle(w: CGFloat) -> some View {
@@ -136,7 +139,7 @@ struct ContentView: View {
                         .italic()
                         .foregroundStyle(Color(hex: "#191717"))
                         .frame(width: w, height: w)
-                        .background(Color.white.opacity(0.8), in: Circle())
+                        .background(Color.white, in: Circle())
                         .glassEffect(in: Circle())
                 }
                 .buttonStyle(.plain)
@@ -149,13 +152,14 @@ struct ContentView: View {
                     .foregroundStyle(Color(hex: "#191717"))
                     .animation(.easeInOut(duration: 0.2), value: isGo)
                     .frame(width: w, height: w)
-                    .background(Color.white.opacity(0.8), in: Circle())
+                    .background(Color.white, in: Circle())
                     .glassEffect(in: Circle())
                     .transition(.opacity)
             } else if phase == .workout {
                 TempoVisualizerView(workoutType: .cardio, detector: detector)
                     .frame(width: w, height: w)
-                    .background(Color.white.opacity(0.8), in: Circle())
+                    .clipShape(Circle())
+                    .background(Color.white, in: Circle())
                     .glassEffect(in: Circle())
                     .transition(.opacity)
             }
