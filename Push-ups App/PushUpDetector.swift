@@ -33,7 +33,10 @@ class PushUpDetector: NSObject, ObservableObject {
     
     /// Статус готовности к тренировке
     @Published var isCalibrated: Bool = false
-    
+
+    /// Активна ли тренировка (считаем повторения)
+    @Published var isActive: Bool = false
+
     /// Сообщения для пользователя
     @Published var feedbackMessage: String = "Расположите телефон перед собой"
     
@@ -76,6 +79,7 @@ class PushUpDetector: NSObject, ObservableObject {
     
     /// Сброс калибровки
     func resetCalibration() {
+        isActive = false
         isCalibrated = false
         baselineDistance = 0.0
         pushUpCount = 0
@@ -101,7 +105,10 @@ class PushUpDetector: NSObject, ObservableObject {
             }
             return
         }
-        
+
+        // Не считаем повторения пока тренировка не активна
+        guard isActive else { return }
+
         // Определяем фазу отжимания
         detectPhase(smoothedDistance)
     }
