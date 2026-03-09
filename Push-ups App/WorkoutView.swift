@@ -59,21 +59,22 @@ struct TempoVisualizerView: View {
 
     // MARK: - Wave Math
 
-    private func easeInOutSine(_ t: Double) -> Double {
-        -(cos(.pi * t) - 1) / 2
+    // C2-continuous: zero 1st AND 2nd derivatives at t=0 and t=1 — no visual kinks at shelf joints
+    private func smoothstep(_ t: Double) -> Double {
+        3 * t * t - 2 * t * t * t
     }
 
     // Returns position [1.0=top/arms-extended, 0.0=bottom/chest-to-floor]
     private func fourPhasePosition(elapsed: Double) -> Double {
         let phase = elapsed.truncatingRemainder(dividingBy: period)
         if phase < 2.0 {
-            return 1.0 - easeInOutSine(phase / 2.0)      // Phase 1: lower 1→0
+            return 1.0 - smoothstep(phase / 2.0)       // Phase 1: lower 1→0
         } else if phase < 3.0 {
-            return 0.0                                     // Phase 2: hold at bottom
+            return 0.0                                   // Phase 2: hold at bottom
         } else if phase < 5.0 {
-            return easeInOutSine((phase - 3.0) / 2.0)    // Phase 3: raise 0→1
+            return smoothstep((phase - 3.0) / 2.0)     // Phase 3: raise 0→1
         } else {
-            return 1.0                                     // Phase 4: hold at top
+            return 1.0                                   // Phase 4: hold at top
         }
     }
 

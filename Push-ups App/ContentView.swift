@@ -145,23 +145,23 @@ struct ContentView: View {
                 .buttonStyle(.plain)
                 .contentShape(Circle())
                 .transition(.opacity)
-            } else if phase == .countdown {
-                Text(isGo ? "Go!" : "Get ready")
-                    .font(.system(size: 40, weight: .regular).italic())
-                    .tracking(-0.8)
-                    .foregroundStyle(Color(hex: "#191717"))
-                    .animation(.easeInOut(duration: 0.2), value: isGo)
-                    .frame(width: w, height: w)
-                    .background(Color.white, in: Circle())
-                    .glassEffect(in: Circle())
-                    .transition(.opacity)
-            } else if phase == .workout {
-                TempoVisualizerView(workoutType: .cardio, detector: detector)
-                    .frame(width: w, height: w)
-                    .clipShape(Circle())
-                    .background(Color.white, in: Circle())
-                    .glassEffect(in: Circle())
-                    .transition(.opacity)
+            } else if phase == .countdown || phase == .workout {
+                ZStack {
+                    TempoVisualizerView(workoutType: .cardio, detector: detector)
+                        .frame(width: w, height: w)
+                    if phase == .countdown {
+                        Text(isGo ? "Go!" : "Get ready")
+                            .font(.system(size: 40, weight: .regular).italic())
+                            .tracking(-0.8)
+                            .foregroundStyle(Color(hex: "#191717"))
+                            .animation(.easeInOut(duration: 0.2), value: isGo)
+                            .transition(.opacity)
+                    }
+                }
+                .clipShape(Circle())
+                .background(Color.white, in: Circle())
+                .glassEffect(in: Circle())
+                .transition(.opacity)
             }
         }
         .frame(width: w, height: w)
