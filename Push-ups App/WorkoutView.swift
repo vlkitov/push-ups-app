@@ -27,7 +27,6 @@ struct TempoVisualizerView: View {
         TimelineView(.animation) { timeline in
             let elapsed = timeline.date.timeIntervalSince(startTime)
             Canvas { ctx, size in
-                drawFaintGrid(ctx: ctx, size: size)
                 drawWavePath(ctx: ctx, size: size, elapsed: elapsed)
                 drawNowLine(ctx: ctx, size: size)
 
@@ -42,7 +41,6 @@ struct TempoVisualizerView: View {
                 drawActualMarker(ctx: ctx, nowX: nowX, actualY: actualY,
                                  targetNormY: targetNormY, actualNormY: actualNormY)
             }
-            .clipShape(Circle())
             .onChange(of: timeline.date) { _, newDate in
                 let elapsed = newDate.timeIntervalSince(startTime)
                 let targetNormY = waveNormY(elapsed: elapsed)
@@ -61,21 +59,22 @@ struct TempoVisualizerView: View {
 
     // MARK: - Wave Math
 
-    private func easeInOutSine(_ t: Double) -> Double {
-        -(cos(.pi * t) - 1) / 2
+    // C2-continuous: zero 1st AND 2nd derivatives at t=0 and t=1 — no visual kinks at shelf joints
+    private func smoothstep(_ t: Double) -> Double {
+        3 * t * t - 2 * t * t * t
     }
 
     // Returns position [1.0=top/arms-extended, 0.0=bottom/chest-to-floor]
     private func fourPhasePosition(elapsed: Double) -> Double {
         let phase = elapsed.truncatingRemainder(dividingBy: period)
         if phase < 2.0 {
-            return 1.0 - easeInOutSine(phase / 2.0)      // Phase 1: lower 1→0
+            return 1.0 - smoothstep(phase / 2.0)       // Phase 1: lower 1→0
         } else if phase < 3.0 {
-            return 0.0                                     // Phase 2: hold at bottom
+            return 0.0                                   // Phase 2: hold at bottom
         } else if phase < 5.0 {
-            return easeInOutSine((phase - 3.0) / 2.0)    // Phase 3: raise 0→1
+            return smoothstep((phase - 3.0) / 2.0)     // Phase 3: raise 0→1
         } else {
-            return 1.0                                     // Phase 4: hold at top
+            return 1.0                                   // Phase 4: hold at top
         }
     }
 
@@ -85,14 +84,16 @@ struct TempoVisualizerView: View {
     }
 
     private func normToCanvasY(normY: Double, size: CGSize) -> CGFloat {
+        let graphHeight = size.height / 2
+        let topOffset = size.height / 4
         let margin: CGFloat = 16
-        return margin + CGFloat(normY) * (size.height - 2 * margin)
+        return topOffset + margin + CGFloat(normY) * (graphHeight - 2 * margin)
     }
 
     // MARK: - Drawing
 
     private func drawFaintGrid(ctx: GraphicsContext, size: CGSize) {
-        let step: CGFloat = 24
+        let step = size.height / 8  // graph height = size.height/2 → 4 cells per graph zone
         var gridPath = Path()
         var x: CGFloat = 0
         while x <= size.width {
@@ -131,7 +132,7 @@ struct TempoVisualizerView: View {
 
         ctx.stroke(
             wavePath,
-            with: .color(.white.opacity(0.55)),
+            with: .color(.black),
             style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
         )
     }
@@ -154,30 +155,18 @@ struct TempoVisualizerView: View {
 
     private func drawTargetMarker(ctx: GraphicsContext, nowX: CGFloat, targetY: CGFloat) {
         let center = CGPoint(x: nowX, y: targetY)
-        let baseRadius: CGFloat = 12
-
-        // Glow rings (outermost first — painter's order)
-        let glowRings: [(extra: CGFloat, opacity: Double)] = [
-            (12, 0.12),
-            (7,  0.22),
-            (3,  0.35)
-        ]
-        for ring in glowRings {
-            let r = baseRadius + ring.extra
-            let rect = CGRect(x: center.x - r, y: center.y - r, width: r * 2, height: r * 2)
-            ctx.fill(Path(ellipseIn: rect), with: .color(.white.opacity(ring.opacity)))
-        }
-
-        // Main fill
-        let rect = CGRect(x: center.x - baseRadius, y: center.y - baseRadius,
-                          width: baseRadius * 2, height: baseRadius * 2)
+        let radius: CGFloat = 11.7
+        let rect = CGRect(x: center.x - radius, y: center.y - radius,
+                          width: radius * 2, height: radius * 2)
         ctx.fill(Path(ellipseIn: rect), with: .color(.white))
+        ctx.stroke(Path(ellipseIn: rect), with: .color(.black),
+                   style: StrokeStyle(lineWidth: 2.5))
     }
 
     private func drawActualMarker(ctx: GraphicsContext, nowX: CGFloat, actualY: CGFloat,
                                   targetNormY: Double, actualNormY: Double) {
         let deviation = abs(targetNormY - actualNormY)
-        let color: Color = deviation < 0.10 ? .green : deviation < 0.25 ? .yellow : .red
+        let color: Color = deviation < 0.10 ? .black : .red
 
         let radius: CGFloat = 9
         let center = CGPoint(x: nowX, y: actualY)
